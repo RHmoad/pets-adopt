@@ -1,83 +1,82 @@
-import { useEffect, useState } from "react";
+import { useState, useContext } from "react";
+import { useQuery } from "@tanstack/react-query";
 import Results from "./results";
+import AdoptedPetContext from "./AdoptedPetContext";
 import useBreedList from "./UseBreedList";
-
-
+import fetchSearch from "./fetchSearch";
 
 const ANIMALS = ["bird", "cat", "dog", "rabbit", "reptile"];
 
+const SearchParams = () => {
+  // const [location,setLocation] = useState("");
+  const [requestParams, setRequestPramas] = useState({
+    location: "",
+    animal: "",
+    breed: "",
+  });
+  const [animal, setAnimal] = useState("");
+  // const [breed,setBreed]=useState("")
 
-const SearchParams = () => { 
-    const [location,setLocation] = useState("");
-    const [animal,setAnimal]=useState("");
-    const [breed,setBreed]=useState("")
-    const [pets,setPets]=useState([])
-    const [breeds]=useBreedList(animal)
+  const [breeds] = useBreedList(animal);
 
-    useEffect(()=>{
-        requestPets();
-    },[])
+  const [adoptedPet] = useContext(AdoptedPetContext);
 
-   async function requestPets(){
-        const res= await fetch(`http://pets-v2.dev-apis.com/pets?animal=${animal}&location=${location}&breed=${breed}`);
-        const json=await res.json();
-        setPets(json.pets)
-        console.log(json)
-        
-   }
+  const results = useQuery(["search", requestParams], fetchSearch);
+  const pets = results?.data?.pets ?? [];
 
-   
-
-    return (
-      <div className="search-params">
-        <form 
-          onSubmit={(e)=>{
-            e.preventDefault();
-            requestPets();  
-        }}>
-          <label htmlFor="location">
-            Location
-            <input onChange={e=>setLocation(e.target.value)} id="location" value={location} placeholder="Location" />
-          </label>
-          <label htmlFor="animal">
-        <select
-        id="animal"
-        value={animal}
-        onChange={(e) => {
-            setAnimal(e.target.value);
-            setBreed("")
-          }}
-        >
+  return (
+    <div className="search-params">
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          const formData = new FormData(e.target);
+          const obj = {
+            animal: formData.get("animal" ?? ""),
+            breed: formData.get("breed" ?? ""),
+            location: formData.get("location" ?? ""),
+          };
+          setRequestPramas(obj);
+        }}
+      >
+        {adoptedPet ? (
+          <div className="pet image-container">
+            <img src={adoptedPet.images[0]} alt={adoptedPet.name} />
+          </div>
+        ) : null}
+        <label htmlFor="location">
+          Location
+          <input name="location" id="location" placeholder="Location" />
+        </label>
+        <label htmlFor="animal">
+          Animal
+          <select
+            id="animal"
+            name="animal"
+            value={animal}
+            onChange={(e) => {
+              setAnimal(e.target.value);
+            }}
+          >
             <option />
-            {ANIMALS.map(animal=>(
-                <option key={animal}>{animal}</option>
+            {ANIMALS.map((animal) => (
+              <option key={animal}>{animal}</option>
             ))}
-
-        </select>
-        <select
-        id="breed"
-        disabled={breeds.length===0}
-        value={breed}
-        onChange={(e) => {
-            setBreed(e.target.value);
-          }}
-        >
-            
+          </select>
+        </label>
+        <label htmlFor="breed">
+          Breed
+          <select id="breed" disabled={breeds.length === 0} name="breed">
             <option />
-            {breeds.map(breed=>(
-                <option key={breed}>{breed}</option>
+            {breeds.map((breed) => (
+              <option key={breed}>{breed}</option>
             ))}
+          </select>
+        </label>
+        <button>Submit</button>
+      </form>
+      <Results pets={pets} />
+    </div>
+  );
+};
 
-        </select>
-          </label>
-          <button>Submit</button>
-        </form>
-        <Results pets={pets}/>
-      </div>
-    );
-  };
-  
-  export default SearchParams;
-
-
-  
+export default SearchParams;
